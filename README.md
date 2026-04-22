@@ -1,24 +1,26 @@
-# Despliegue Ollama + Gemma 4 E2B (Q4_0) en Dokploy
+# Despliegue Ollama + Gemma 2 2B en Dokploy
 
-> Guía técnica para desplegar el modelo `gemma4:e2b-q4_0-q4_0` vía Ollama en un VPS con **8 GB de RAM**.
+> Guía técnica para desplegar el modelo `gemma2:2b` vía Ollama en un VPS con **8 GB de RAM**.
+
+## Por qué Gemma 2 2B
+
+Este modelo fue elegido después de múltiples intentos con `gemma4:e2b` (que requiere ~7.1 GB de RAM y mata el proceso en VPS sin GPU) y su versión cuantizada inexistente (`gemma4:e2b-q4_0` no existe en Ollama).
+
+`gemma2:2b` ofrece el mejor balance para VPS sin GPU:
+- **~1.6 GB** en disco
+- **~2.0 GB** en RAM durante inferencia
+- Respuestas en **10-20 segundos** en CPU
+- Deja margen para múltiples servicios en el mismo VPS
 
 ## Requisitos de Infraestructura
 
-- **RAM:** 8 GB (mínimo recomendado).
+- **RAM:** 4 GB mínimo, 8 GB recomendado (para margen).
 - **CPU:** 4 vCores (se asignan 3.5 al contenedor).
-- **Disco:** 10 GB libres (el modelo Q4_0 ocupa ~3.2 GB en RAM / ~4 GB en disco).
-
-> **Nota sobre el modelo:** Se usa la versión cuantizada `gemma4:e2b-q4_0-q4_0` en lugar de `gemma4:e2b-q4_0` (full quality). La versión Q4_0 reduce el consumo de RAM de **~7.1 GB a ~3.2 GB**, haciendo viable el despliegue en un VPS de 8 GB sin GPU.
+- **Disco:** 5 GB libres.
 
 ## 1. Docker Compose
 
 Pega el contenido de `docker-compose.yml` en la interfaz de Dokploy (sección **Docker Compose** del servicio).
-
-**Configuración aplicada:**
-- Límite de CPU: **3.5 vCores** (`cpus: '3.50'`), dejando margen para el SO.
-- `OLLAMA_FLASH_ATTENTION=true`: Reduce el consumo de memoria durante la inferencia.
-- `OLLAMA_KEEP_ALIVE=5m`: Mantiene el modelo cargado 5 minutos tras el último uso.
-- `OLLAMA_CONTEXT_LENGTH=512`: Limita el contexto por defecto a 512 tokens para inferencias rápidas.
 
 ## 2. Variables de Entorno y Red
 
@@ -32,7 +34,6 @@ Verifica estas variables en la pestaña **Environment** de Dokploy:
 | `OLLAMA_MAX_LOADED_MODELS` | `1` |
 | `OLLAMA_FLASH_ATTENTION` | `true` |
 | `OLLAMA_KEEP_ALIVE` | `5m` |
-| `OLLAMA_CONTEXT_LENGTH` | `512` |
 
 ### Enrutamiento de Dominio
 1. En Dokploy, dentro del servicio Ollama, ve a **Domains**.
@@ -40,21 +41,13 @@ Verifica estas variables en la pestaña **Environment** de Dokploy:
 3. Puerto: `11434`.
 4. Activa **HTTPS**.
 
-## 3. Post-Despliegue: Descargar el Modelo
+## 3. Post-Despliegue
 
-El contenedor intenta descargar `gemma4:e2b-q4_0` automáticamente al iniciar. Si prefieres hacerlo manualmente por SSH:
-
-```bash
-docker exec -it ollama-gemma ollama pull gemma4:e2b-q4_0
-```
-
-Verifica la instalación:
+El contenedor descarga `gemma2:2b` automáticamente al iniciar. Verifica:
 
 ```bash
 docker exec -it ollama-gemma ollama list
 ```
-
-> ⚠️ **Advertencia:** La descarga es de ~7.2 GB. El primer arranque puede tardar varios minutos dependiendo de tu ancho de banda.
 
 ## 4. Snippets de Integración
 
@@ -64,10 +57,9 @@ docker exec -it ollama-gemma ollama list
 curl -X POST https://gemma.hostred.cl/api/generate \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma4:e2b-q4_0",
+    "model": "gemma2:2b",
     "prompt": "¿Qué es DevOps? Responde en español.",
-    "stream": false,
-    "options": { "num_ctx": 512 }
+    "stream": false
   }'
 ```
 
@@ -78,12 +70,11 @@ fetch('https://gemma.hostred.cl/api/chat', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    model: 'gemma4:e2b-q4_0',
+    model: 'gemma2:2b',
     messages: [
       { role: 'user', content: '¿Qué es DevOps? Responde en español.' }
     ],
-    stream: false,
-    options: { num_ctx: 512 }
+    stream: false
   })
 })
 .then(response => response.json())
@@ -95,9 +86,9 @@ fetch('https://gemma.hostred.cl/api/chat', {
 
 > **Nota:** Para `/api/generate`, extrae `data.response`. Para `/api/chat`, extrae `data.message.content`.
 
-## 5. Clasificación de Correos (Parámetros Variables)
+## 5. Clasificación de Correos
 
-Usa el mismo endpoint (`/api/generate`) pasando parámetros de comportamiento. Revisa `classify.js` para ejemplos listos para usar.
+Usa el mismo endpoint (`/api/generate`) pasando parámetros de comportamiento. Revisa `classify.js` para ejemplos listos.
 
 ### cURL — Clasificación básica
 
@@ -105,10 +96,10 @@ Usa el mismo endpoint (`/api/generate`) pasando parámetros de comportamiento. R
 curl -X POST https://gemma.hostred.cl/api/generate \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma4:e2b-q4_0",
+    "model": "gemma2:2b",
     "prompt": "Clasifica el siguiente correo como IMPORTANTE o NO_IMPORTANTE.\n\nReglas:\n- Es de un cliente o jefe → IMPORTANTE\n- Newsletter o promoción → NO_IMPORTANTE\n\nResponde ÚNICAMENTE con: IMPORTANTE o NO_IMPORTANTE.\n\nAsunto: Factura vencida #1234\nContenido: Estimado cliente, su factura venció ayer.\n\nClasificación:",
     "stream": false,
-    "options": { "temperature": 0.1, "num_predict": 10, "num_ctx": 512 }
+    "options": { "temperature": 0.1, "num_predict": 10 }
   }'
 ```
 
@@ -130,10 +121,10 @@ async function classifyEmail(subject, content, customRules = []) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'gemma4:e2b-q4_0',
+      model: 'gemma2:2b',
       prompt,
       stream: false,
-      options: { temperature: 0.1, num_predict: 10, num_ctx: 512 }
+      options: { temperature: 0.1, num_predict: 10 }
     })
   });
 
@@ -148,10 +139,11 @@ classifyEmail('Propuesta de colaboración', 'Hola, quiero contratar sus servicio
   .then(console.log);
 ```
 
-## Optimización para 8 GB de RAM
+## Notas sobre Gemma 4
 
-Si experimentas lentitud o OOM:
+Si en el futuro deseas usar `gemma4:e2b`, necesitarás:
+- **16 GB de RAM mínimo** (el modelo usa ~7.1 GB)
+- **GPU NVIDIA** recomendada (RTX 3060 12GB o superior)
+- O un VPS cloud con aceleración GPU (AWS g4dn, Google Cloud T4, etc.)
 
-1. **Reduce el contexto:** Usa `"num_ctx": 512` (o incluso `256`) en las peticiones para tareas simples como clasificación.
-2. **Disminuye `OLLAMA_KEEP_ALIVE`:** Cambia a `1m` o `0` para liberar RAM inmediatamente tras cada inferencia.
-3. **Monitorea el swap:** Asegúrate de que el VPS tenga swap configurado como colchón de emergencia.
+En Ollama no existe el tag `gemma4:e2b-q4_0`. La cuantización se maneja internamente por el cliente según tu hardware.

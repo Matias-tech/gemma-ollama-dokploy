@@ -1,10 +1,10 @@
 /**
- * Ejemplo de consumo de la API de Ollama con Gemma 4 E2B
+ * Ejemplo de consumo de la API de Ollama con Gemma 2 2B
  * Endpoint: https://gemma.hostred.cl/api/chat
  */
 
 const API_URL = 'https://gemma.hostred.cl/api/chat';
-const MODEL = 'gemma4:e2b-q4_0';
+const MODEL = 'gemma2:2b';
 
 async function chatWithGemma(prompt) {
   try {
@@ -16,10 +16,7 @@ async function chatWithGemma(prompt) {
         messages: [
           { role: 'user', content: prompt }
         ],
-        stream: false,
-        options: {
-          num_ctx: 512
-        }
+        stream: false
       })
     });
 
