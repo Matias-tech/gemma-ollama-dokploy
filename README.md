@@ -1,6 +1,6 @@
-# Despliegue Ollama + Gemma 4 E2B en Dokploy
+# Despliegue Ollama + Gemma 2 2B en Dokploy
 
-> Guía técnica para desplegar el modelo `gemma4:e2b` vía Ollama en un VPS con restricción estricta de 3 GB de RAM.
+> Guía técnica para desplegar el modelo `gemma2:2b` vía Ollama en un VPS con restricción estricta de 3 GB de RAM.
 
 ## 1. Docker Compose
 
@@ -33,7 +33,7 @@ Verifica estas variables en la pestaña **Environment** de Dokploy:
 Ejecuta en la terminal del VPS una vez que el contenedor esté arriba:
 
 ```bash
-docker exec -it ollama-gemma ollama pull gemma4:e2b
+docker exec -it ollama-gemma ollama pull gemma2:2b
 ```
 
 Verifica la instalación:
@@ -50,7 +50,7 @@ docker exec -it ollama-gemma ollama list
 curl -X POST https://gemma.hostred.cl/api/generate \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma4:e2b",
+    "model": "gemma2:2b",
     "prompt": "¿Qué es DevOps? Responde en español.",
     "stream": false
   }'
@@ -63,7 +63,7 @@ fetch('https://gemma.hostred.cl/api/chat', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    model: 'gemma4:e2b',
+    model: 'gemma2:2b',
     messages: [
       { role: 'user', content: '¿Qué es DevOps? Responde en español.' }
     ],
@@ -78,3 +78,56 @@ fetch('https://gemma.hostred.cl/api/chat', {
 ```
 
 > **Nota:** Para `/api/generate`, extrae `data.response`. Para `/api/chat`, extrae `data.message.content`.
+
+## 5. Clasificación de Correos (Parámetros Variables)
+
+Usa el mismo endpoint (`/api/generate`) pasando parámetros de comportamiento. Revisa `classify.js` para ejemplos listos para usar.
+
+### cURL — Clasificación básica
+
+```bash
+curl -X POST https://gemma.hostred.cl/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma2:2b",
+    "prompt": "Clasifica el siguiente correo como IMPORTANTE o NO_IMPORTANTE.\n\nReglas:\n- Es de un cliente o jefe → IMPORTANTE\n- Newsletter o promoción → NO_IMPORTANTE\n\nResponde ÚNICAMENTE con: IMPORTANTE o NO_IMPORTANTE.\n\nAsunto: Factura vencida #1234\nContenido: Estimado cliente, su factura venció ayer.\n\nClasificación:",
+    "stream": false,
+    "options": { "temperature": 0.1, "num_predict": 10 }
+  }'
+```
+
+### JavaScript — Parámetros variables
+
+```javascript
+const API_URL = 'https://gemma.hostred.cl/api/generate';
+
+async function classifyEmail(subject, content, customRules = []) {
+  const rules = customRules.length > 0 ? customRules : [
+    'Es de un cliente, jefe o proveedor crítico → IMPORTANTE',
+    'Contiene facturas, pagos o requiere acción inmediata → IMPORTANTE',
+    'Newsletter, promociones, notificaciones automáticas → NO_IMPORTANTE'
+  ];
+
+  const prompt = `Clasifica el siguiente correo como IMPORTANTE o NO_IMPORTANTE.\n\nReglas:\n${rules.map(r => '- ' + r).join('\n')}\n\nResponde ÚNICAMENTE con: IMPORTANTE o NO_IMPORTANTE.\n\nAsunto: ${subject}\nContenido: ${content.substring(0, 800)}\n\nClasificación:`;
+
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gemma2:2b',
+      prompt,
+      stream: false,
+      options: { temperature: 0.1, num_predict: 10 }
+    })
+  });
+
+  const data = await res.json();
+  return {
+    important: data.response.trim() === 'IMPORTANTE',
+    raw: data.response.trim()
+  };
+}
+
+classifyEmail('Propuesta de colaboración', 'Hola, quiero contratar sus servicios.')
+  .then(console.log);
+```
