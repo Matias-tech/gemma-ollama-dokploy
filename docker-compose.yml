@@ -14,7 +14,7 @@ services:
       - OLLAMA_ORIGINS=https://gemma.hostred.cl,http://localhost,https://localhost
       - OLLAMA_NUM_PARALLEL=1
       - OLLAMA_MAX_LOADED_MODELS=1
-    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 15; ollama pull gemma4:e2b; wait"]
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 15; ollama pull gemma2:2b; wait"]
     deploy:
       resources:
         limits:
