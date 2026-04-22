@@ -1,16 +1,17 @@
 /**
- * Cliente de Clasificación de Correos usando Ollama + Gemma 2 2B
+ * Cliente de Clasificación de Correos usando Ollama + Gemma 4 E2B
  * Endpoint: https://gemma.hostred.cl/api/generate
  *
  * Parámetros de comportamiento:
  * - rules: Array de reglas personalizadas para clasificar
  * - temperature: 0.0 - 1.0 (recomendado 0.1 para consistencia)
  * - maxTokens: Límite de tokens de respuesta
+ * - numCtx: Tamaño del contexto (recomendado 512 para ahorrar RAM)
  * - labels: Etiquetas de salida personalizadas (default: IMPORTANTE / NO_IMPORTANTE)
  */
 
 const API_URL = 'https://gemma.hostred.cl/api/generate';
-const MODEL = 'gemma2:2b';
+const MODEL = 'gemma4:e2b';
 
 async function classifyEmail({
   subject,
@@ -18,6 +19,7 @@ async function classifyEmail({
   rules = [],
   temperature = 0.1,
   maxTokens = 10,
+  numCtx = 512,
   labels = { positive: 'IMPORTANTE', negative: 'NO_IMPORTANTE' }
 }) {
   if (!subject || !content) {
@@ -55,7 +57,8 @@ Clasificación:`;
       stream: false,
       options: {
         temperature,
-        num_predict: maxTokens
+        num_predict: maxTokens,
+        num_ctx: numCtx
       }
     })
   });
