@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ollama:
     image: ollama/ollama:latest
@@ -20,10 +18,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '5.00'
-          memory: 7G
+          cpus: '3.50'
         reservations:
-          cpus: '2.00'
+          cpus: '1.00'
           memory: 2G
 
 volumes:
