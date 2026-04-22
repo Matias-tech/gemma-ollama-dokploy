@@ -13,10 +13,10 @@
 Pega el contenido de `docker-compose.yml` en la interfaz de Dokploy (sección **Docker Compose** del servicio).
 
 **Configuración aplicada:**
-- Límite de memoria: **7 GB** (`memory: 7G`), dejando 1 GB para el SO y Dokploy.
-- Límite de CPU: **5 vCores** (`cpus: '5.00'`).
+- Límite de CPU: **3.5 vCores** (`cpus: '3.50'`), dejando margen para el SO.
 - `OLLAMA_FLASH_ATTENTION=true`: Reduce el consumo de memoria durante la inferencia.
-- `OLLAMA_KEEP_ALIVE=5m`: Mantiene el modelo cargado 5 minutos tras el último uso (equilibrio entre latencia y RAM).
+- `OLLAMA_KEEP_ALIVE=5m`: Mantiene el modelo cargado 5 minutos tras el último uso.
+- `OLLAMA_CONTEXT_LENGTH=512`: Limita el contexto por defecto a 512 tokens, reduciendo el uso de RAM de ~7.1 GB a ~5-6 GB.
 
 ## 2. Variables de Entorno y Red
 
@@ -30,6 +30,7 @@ Verifica estas variables en la pestaña **Environment** de Dokploy:
 | `OLLAMA_MAX_LOADED_MODELS` | `1` |
 | `OLLAMA_FLASH_ATTENTION` | `true` |
 | `OLLAMA_KEEP_ALIVE` | `5m` |
+| `OLLAMA_CONTEXT_LENGTH` | `512` |
 
 ### Enrutamiento de Dominio
 1. En Dokploy, dentro del servicio Ollama, ve a **Domains**.
@@ -63,7 +64,8 @@ curl -X POST https://gemma.hostred.cl/api/generate \
   -d '{
     "model": "gemma4:e2b",
     "prompt": "¿Qué es DevOps? Responde en español.",
-    "stream": false
+    "stream": false,
+    "options": { "num_ctx": 512 }
   }'
 ```
 
@@ -78,7 +80,8 @@ fetch('https://gemma.hostred.cl/api/chat', {
     messages: [
       { role: 'user', content: '¿Qué es DevOps? Responde en español.' }
     ],
-    stream: false
+    stream: false,
+    options: { num_ctx: 512 }
   })
 })
 .then(response => response.json())

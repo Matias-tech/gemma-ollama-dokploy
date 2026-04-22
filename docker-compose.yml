@@ -14,6 +14,7 @@ services:
       - OLLAMA_MAX_LOADED_MODELS=1
       - OLLAMA_FLASH_ATTENTION=true
       - OLLAMA_KEEP_ALIVE=5m
+      - OLLAMA_CONTEXT_LENGTH=512
     entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 30; ollama pull gemma4:e2b; wait"]
     deploy:
       resources:

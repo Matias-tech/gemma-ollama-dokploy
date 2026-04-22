@@ -16,7 +16,10 @@ async function chatWithGemma(prompt) {
         messages: [
           { role: 'user', content: prompt }
         ],
-        stream: false
+        stream: false,
+        options: {
+          num_ctx: 512
+        }
       })
     });
 
