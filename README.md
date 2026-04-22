@@ -1,12 +1,14 @@
-# Despliegue Ollama + Gemma 4 E2B en Dokploy
+# Despliegue Ollama + Gemma 4 E2B (Q4_0) en Dokploy
 
-> Guía técnica para desplegar el modelo `gemma4:e2b` vía Ollama en un VPS con **8 GB de RAM**.
+> Guía técnica para desplegar el modelo `gemma4:e2b-q4_0-q4_0` vía Ollama en un VPS con **8 GB de RAM**.
 
 ## Requisitos de Infraestructura
 
-- **RAM:** 8 GB (mínimo recomendado para `gemma4:e2b`).
-- **CPU:** 6 vCores (se asignan 5 al contenedor, 1 para el sistema).
-- **Disco:** 15 GB libres (el modelo ocupa ~7.2 GB).
+- **RAM:** 8 GB (mínimo recomendado).
+- **CPU:** 4 vCores (se asignan 3.5 al contenedor).
+- **Disco:** 10 GB libres (el modelo Q4_0 ocupa ~3.2 GB en RAM / ~4 GB en disco).
+
+> **Nota sobre el modelo:** Se usa la versión cuantizada `gemma4:e2b-q4_0-q4_0` en lugar de `gemma4:e2b-q4_0` (full quality). La versión Q4_0 reduce el consumo de RAM de **~7.1 GB a ~3.2 GB**, haciendo viable el despliegue en un VPS de 8 GB sin GPU.
 
 ## 1. Docker Compose
 
@@ -16,7 +18,7 @@ Pega el contenido de `docker-compose.yml` en la interfaz de Dokploy (sección **
 - Límite de CPU: **3.5 vCores** (`cpus: '3.50'`), dejando margen para el SO.
 - `OLLAMA_FLASH_ATTENTION=true`: Reduce el consumo de memoria durante la inferencia.
 - `OLLAMA_KEEP_ALIVE=5m`: Mantiene el modelo cargado 5 minutos tras el último uso.
-- `OLLAMA_CONTEXT_LENGTH=512`: Limita el contexto por defecto a 512 tokens, reduciendo el uso de RAM de ~7.1 GB a ~5-6 GB.
+- `OLLAMA_CONTEXT_LENGTH=512`: Limita el contexto por defecto a 512 tokens para inferencias rápidas.
 
 ## 2. Variables de Entorno y Red
 
@@ -40,10 +42,10 @@ Verifica estas variables en la pestaña **Environment** de Dokploy:
 
 ## 3. Post-Despliegue: Descargar el Modelo
 
-El contenedor intenta descargar `gemma4:e2b` automáticamente al iniciar. Si prefieres hacerlo manualmente por SSH:
+El contenedor intenta descargar `gemma4:e2b-q4_0` automáticamente al iniciar. Si prefieres hacerlo manualmente por SSH:
 
 ```bash
-docker exec -it ollama-gemma ollama pull gemma4:e2b
+docker exec -it ollama-gemma ollama pull gemma4:e2b-q4_0
 ```
 
 Verifica la instalación:
@@ -62,7 +64,7 @@ docker exec -it ollama-gemma ollama list
 curl -X POST https://gemma.hostred.cl/api/generate \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma4:e2b",
+    "model": "gemma4:e2b-q4_0",
     "prompt": "¿Qué es DevOps? Responde en español.",
     "stream": false,
     "options": { "num_ctx": 512 }
@@ -76,7 +78,7 @@ fetch('https://gemma.hostred.cl/api/chat', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    model: 'gemma4:e2b',
+    model: 'gemma4:e2b-q4_0',
     messages: [
       { role: 'user', content: '¿Qué es DevOps? Responde en español.' }
     ],
@@ -103,7 +105,7 @@ Usa el mismo endpoint (`/api/generate`) pasando parámetros de comportamiento. R
 curl -X POST https://gemma.hostred.cl/api/generate \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma4:e2b",
+    "model": "gemma4:e2b-q4_0",
     "prompt": "Clasifica el siguiente correo como IMPORTANTE o NO_IMPORTANTE.\n\nReglas:\n- Es de un cliente o jefe → IMPORTANTE\n- Newsletter o promoción → NO_IMPORTANTE\n\nResponde ÚNICAMENTE con: IMPORTANTE o NO_IMPORTANTE.\n\nAsunto: Factura vencida #1234\nContenido: Estimado cliente, su factura venció ayer.\n\nClasificación:",
     "stream": false,
     "options": { "temperature": 0.1, "num_predict": 10, "num_ctx": 512 }
@@ -128,7 +130,7 @@ async function classifyEmail(subject, content, customRules = []) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'gemma4:e2b',
+      model: 'gemma4:e2b-q4_0',
       prompt,
       stream: false,
       options: { temperature: 0.1, num_predict: 10, num_ctx: 512 }

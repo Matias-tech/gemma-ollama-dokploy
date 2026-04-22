@@ -11,7 +11,7 @@
  */
 
 const API_URL = 'https://gemma.hostred.cl/api/generate';
-const MODEL = 'gemma4:e2b';
+const MODEL = 'gemma4:e2b-q4_0';
 
 async function classifyEmail({
   subject,
